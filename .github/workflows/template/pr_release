@@ -1,0 +1,16 @@
+Release <%= ENV.fetch("GIT_PR_RELEASE_BRANCH_PRODUCTION") -%> <%= Time.now.strftime("%Y%m%d") %>
+
+<% pull_requests.each do |pr| -%>
+<%=pr.to_checklist_item %>
+<% end %>
+<% if pull_requests.first.pr.to_hash[:head][:repo][:name] == "rails-docker" %>
+<% script = changed_files.map do |cf| -%>
+<% cf.filename.slice(/(lib\/tasks\/release\/.*\.rake)/) -%>
+<% end.compact -%>
+<% if not script.empty? -%>
+<%="### release script" %>
+<% script.each do |s| -%>
+<%=s %>
+<% end -%>
+<% end -%>
+<% end -%>

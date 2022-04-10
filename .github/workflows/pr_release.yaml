@@ -1,0 +1,55 @@
+name: git pr release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [staging, master]
+
+jobs:
+  pr-release:
+    name: create pull_request
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Ruby 2.7
+        uses: actions/setup-ruby@v1
+        with:
+          ruby-version: 2.7.x
+
+      - name: Merge to master
+        if: github.event.pull_request.merged == true && github.base_ref == 'staging'
+        env:
+          GIT_PR_RELEASE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_PR_RELEASE_BRANCH_PRODUCTION: master
+          GIT_PR_RELEASE_BRANCH_STAGING: staging
+          GIT_PR_RELEASE_TEMPLATE: ./.github/workflows/template/pr_merge
+          GIT_PR_RELEASE_LABELS: "merge, to master"
+        run: |
+          set -o pipefail
+          git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git remote -v
+          gem install -N git-pr-release -v "0.6.0"
+          git-pr-release --no-fetch || fail=$?
+          if [ ${fail} == 1 ]; then exit 0; fi
+
+      - name: Merge Hotfix to Staging
+        if: github.event.pull_request.merged == true && github.base_ref == 'master' && github.head_ref != 'staging'
+        env:
+          GIT_PR_RELEASE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_PR_RELEASE_BRANCH_PRODUCTION: staging
+          GIT_PR_RELEASE_BRANCH_STAGING: master
+          GIT_PR_RELEASE_TEMPLATE: ./.github/workflows/template/pr_merge
+          GIT_PR_RELEASE_LABELS: "merge, to staging"
+        run: |
+          set -o pipefail
+          git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git remote -v
+          gem install -N git-pr-release -v "0.6.0"
+          git-pr-release --no-fetch || fail=$?
+          if [ ${fail} == 1 ]; then exit 0; fi
